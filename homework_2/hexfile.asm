@@ -5,19 +5,27 @@ data segment
 	_Home         dw	4700h
 	_End          dw	4F00h
 	_Esc          dw	011Bh
+	;------------------------------------------
 	filename      db    101
 			      db    ?
 			      db    101 dup(0)
 	buf           db    256 dup(?)
 	notice        db    'Please input filename:$'
 	errorOpenFile db    'Cannot open file!$'
+	debugInfo     db    '---------DEBUG----------!$'
+	;------------------------------------------
 	handle        dw    ?
 	key           dw    ?
 	bytes_in_buf  dw    ?
-	debugInfo     db    '---------DEBUG----------!$'
+	rows          dw    ?
+	bytes_on_row  dw    ?
+	currRow       dw    ?
+	;TODO
+	;------------------------------------------
 	file_size     dd    ?
 	offsets       dd    ?
 	n             dd    ?
+	lastPageSize  dd    ?
 data ends
 mystack segment
 	    dw 100h dup(?)
@@ -85,15 +93,52 @@ readFile:
 		mov dx, offset buf
 		int 21h
 		ret
-show_this_page:
+clear_this_page:
+		;start at B800:0000
+		mov ax, 0B800h
+		mov es, ax
+		mov di, 0000h
+		mov cx, 80*16
+		mov ax, 0020h
+		cld
+		rep stosw
+		ret
+computeRows:
+		mov ax, word ptr bytes_in_buf
+		mov word ptr rows, ax
+		add word ptr rows, 15
+		mov ax, word ptr rows
+		mov cl, 16
+		div cl
+		mov ah, 0
+		mov word ptr rows, ax
+		ret
+show_this_row:
+		;TODO
+		ret
+computeBytesOnRow:
 		;TODO
 
 		ret
-switchKey:
+show_this_page:
 		;TODO
+		call clear_this_page
+		call computeRows
+		mov cx, rows
+		mov word ptr currRow, 0
+	showRow:
+		call computeBytesOnRow
+		call show_this_row
+		inc word ptr currRow
+	loop showRow
+		ret
+switchKey:
+		;input key
 		mov ah, 0
 		int 16h
-
+		mov byte ptr key[0], al
+		mov byte ptr key[1], ah
+		;which key?
 		mov ax , word ptr _PageUp
 		cmp word ptr key, ax
 	je PageUpPressed
@@ -117,6 +162,7 @@ switchKey:
 		jge doneSwitchKey
 		;set it to 0
 		mov word ptr offsets[0], 0
+		mov word ptr offsets[2], 0
 		jmp doneSwitchKey
 	PageDownPressed:
 		mov dx, word ptr offsets[2]
@@ -138,7 +184,15 @@ switchKey:
 		mov word ptr offsets[2], 0
 		jmp doneSwitchKey
 	EndPressed:
-		;TODO division
+		;dx:ax = file_size
+		mov ax, word ptr file_size[0]
+		mov dx, word ptr file_size[2]
+		;dx:ax-=lastPageSize
+		sub ax, word ptr lastPageSize[0]
+		sbb dx, word ptr lastPageSize[2]
+		;offsets = dx:ax
+		mov word ptr offsets[0], ax
+		mov word ptr offsets[2], dx
 		jmp doneSwitchKey
 	doneSwitchKey:
 		ret
@@ -157,6 +211,25 @@ mainLoops:
 		cmp word ptr key, ax
 	jne again
 		ret
+computeLastPageSize:
+		;lastPageSize = file_size
+		mov ax, word ptr file_size[0]
+		mov dx, word ptr file_size[2]
+		mov word ptr lastPageSize[0], ax
+		mov word ptr lastPageSize[2], dx
+		;while lastPageSize>256, -=256
+	seeIfNeeddecreaseAnother256:
+		cmp word ptr lastPageSize[2], 0
+	ja largeThan256
+		cmp word ptr lastPageSize[0], 256
+	ja largeThan256
+		jmp doneCLPS
+	largeThan256:
+		sub word ptr lastPageSize[0], 256
+		sbb word ptr lastPageSize[2], 0
+		jmp seeIfNeeddecreaseAnother256
+	doneCLPS:
+		ret
 getFileSize:
 		mov ah, 42h
 		mov al, 2
@@ -166,6 +239,7 @@ getFileSize:
 		int 21h
 		mov word ptr file_size[2], dx
 		mov word ptr file_size[0], ax
+		call computeLastPageSize
 		ret
 errorOpening:
 		mov dx, offset errorOpenFile
