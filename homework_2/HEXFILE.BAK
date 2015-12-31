@@ -16,7 +16,6 @@ data segment
 	s             db    '00000000: xx xx xx xx|xx xx xx xx|xx xx xx xx|xx xx xx xx  ................'
 	pattern       db    '00000000:            |           |           |                             '
 	len_pattern equ $-pattern
-	t             db    '0123456789ABCDEF'
 	xx            db    ?
 	;------------------------------------------
 	handle        dw    ?
@@ -25,13 +24,10 @@ data segment
 	rows          dw    ?
 	bytes_on_row  dw    ?
 	currRow       dw    ?
-	curBufPos     dw    ?
-   curVideoOffset dd    ?
 	;TODO
-	;----------------------------------------
+	;------------------------------------------
 	file_size     dd    ?
 	offsets       dd    ?
-	currRowOffset     dd    ?
 	n             dd    ?
 	lastPageSize  dd    ?
 data ends
@@ -53,175 +49,6 @@ code segment
 	    mov ah, 4ch
 	    int 21h
 	   	;Below is the subFunctions
-
-char2hex:;(char xx, char s[], index is bx, bx+1)
-		push cx
-		;get higher 4 bits
-		mov al, byte ptr xx
-		mov cl, 4
-		shr al, cl
-		and al, 0Fh
-		push bx
-		mov bx, offset t
-		xlat
-		pop bx
-		mov byte ptr s[bx], al
-		;get lower 4 bits
-		mov al, byte ptr xx
-		and al, 0Fh
-		push bx
-		mov bx, offset t
-		xlat
-		pop bx
-		mov byte ptr s[bx+1], al
-		pop cx
-		ret
-outputOffsets:
-		push cx
-		push bx
-		mov cx,2
-		mov bx, 0
-	dealWithHigher8bit:
-		push cx
-		mov cl, 8
-		rol word ptr currRowOffset[2], cl
-		mov al, byte ptr currRowOffset[2]
-		mov byte ptr xx, al
-		call char2hex
-		pop cx
-		add bx, 2
-	loop dealWithHigher8bit
-		mov cx, 2
-	dealWithLower8bit:
-		push cx
-		mov cl, 8
-		rol word ptr currRowOffset[0], cl
-		mov al, byte ptr currRowOffset[0]
-		mov byte ptr xx, al
-		call char2hex
-		pop cx
-		add bx, 2
-	loop dealWithLower8bit
-		pop bx
-		pop cx
-		ret
-outputHexData:
-		push cx
-		push bx
-		mov cx, word ptr bytes_on_row
-		mov bx, 10
-		mov ax, word ptr currRow
-		push bx
-		mov bx, 16
-		mul bx
-		mov word ptr curBufPos, ax
-		pop bx
-	dealWithNextHexData:
-	push bx
-		mov bx, word ptr curBufPos
-		mov al, byte ptr buf[bx]
-		mov byte ptr xx, al
-	pop bx
-		call char2hex
-		inc word ptr curBufPos
-		add bx, 3
-	loop dealWithNextHexData
-		pop bx
-		pop cx
-		ret
-outptuByteData:
-	push cx
-	push bx
-		mov ax, data
-		mov es, ax
-		mov ax, word ptr currRow
-		mov bx, 16
-		mul bx
-		mov bx, ax
-		lea si, buf[bx]
-		lea di, s[59]
-		mov cx, bytes_on_row
-		cld
-		rep movsb
-	pop bx
-	pop cx
-		ret
-outputThisRow:
-		;TODO
-		mov ax, 0B800h
-		mov es, ax
-		mov word ptr curVideoOffset, 0000h
-		mov ax, word ptr currRow
-		mov bx, 80*2
-		mul bx
-		add word ptr curVideoOffset, ax
-	push cx
-		mov cx, len_pattern-1
-		mov bx, 0
-		mov di, word ptr curVideoOffset
-	outputOneByte:
-		;TODO   fix output format
-		;mov di, word ptr curVideoOffset
-		mov ah, 17h;TODO color change
-		mov al, s[bx]
-	push cx
-		mov cx, 1
-		cld
-		stosb;di++
-	pop cx
-		inc bx
-		;add word ptr curVideoOffset, 2
-	loop outputOneByte
-	pop cx
-		ret
-show_this_row:
-		;start at B800:0000
-		mov ax, 0B800h
-		mov es, ax
-		mov di, 0000h
-		call copyString
-		call outputOffsets
-		call outputHexData
-		call outptuByteData
-		call outputThisRow
-		ret
-computeBytesOnRow:
-		mov ax, word ptr rows
-		dec ax
-		cmp word ptr currRow, ax
-		je bytesOnLastRow
-		mov word ptr bytes_on_row, 16
-		jmp doneCBOR
-	bytesOnLastRow:
-		;bytes_on_row = bytes_in_buf
-		mov ax, word ptr bytes_in_buf
-		mov word ptr bytes_on_row, ax
-		;currRow * 16
-		mov ax, word ptr currRow
-		mov bx, 16
-		mul bx;save in dx:ax
-		;bytes_on_row -= currRow * 16
-		sub word ptr bytes_on_row, ax
-	doneCBOR:
-		ret
-show_this_page:
-		call clear_this_page
-		call computeRows
-		mov cx, rows
-		mov word ptr currRow, 0
-		; use currRowOffset instead of offsets
-		mov ax, word ptr offsets[0]
-		mov dx, word ptr offsets[2]
-		mov word ptr currRowOffset[0], ax
-		mov word ptr currRowOffset[2], dx
-	showRow:
-		call computeBytesOnRow
-		call show_this_row
-		inc word ptr currRow
-		add word ptr currRowOffset[0], 16
-		adc word ptr currRowOffset[2], 0
-	loop showRow
-		ret
 closeFile:
 		mov ah, 3Eh
 		mov bx, handle
@@ -301,6 +128,74 @@ copyString:
 		cld
 		rep movsb
 		pop cx
+		ret
+char2hex:
+		;TODO
+		ret
+outputOffsets:
+		push cx
+		;TODO
+		mov cx,4
+	dealWithNext8bit:
+		push cx
+		mov cl, 8
+		rol word ptr offsets, cl
+		mov al, byte ptr offsets[0]
+		mov byte ptr xx, al
+		call char2hex
+		pop cx
+	loop dealWithNext8bit
+		pop cx
+		ret
+outputHexData:
+		;TODO
+		ret
+outptuByteData:
+		;TODO
+		ret
+outputThisRow:
+		;TODO
+		ret
+show_this_row:
+		;start at B800:0000
+		mov ax, 0B800h
+		mov es, ax
+		mov di, 0000h
+		call copyString
+		call outputOffsets
+		call outputHexData
+		call outptuByteData
+		call outputThisRow
+		ret
+computeBytesOnRow:
+		mov ax, word ptr rows
+		dec ax
+		cmp word ptr currRow, ax
+		je bytesOnLastRow
+		mov word ptr bytes_on_row, 16
+		jmp doneCBOR
+	bytesOnLastRow:
+		;bytes_on_row = bytes_in_buf
+		mov ax, word ptr bytes_in_buf
+		mov word ptr bytes_on_row, ax
+		;currRow * 16
+		mov ax, word ptr currRow
+		mov bx, 16
+		mul bx;save in dx:ax
+		;bytes_on_row -= currRow * 16
+		sub word ptr bytes_on_row, ax
+	doneCBOR:
+		ret
+show_this_page:
+		call clear_this_page
+		call computeRows
+		mov cx, rows
+		mov word ptr currRow, 0
+	showRow:
+		call computeBytesOnRow
+		call show_this_row
+		inc word ptr currRow
+	loop showRow
 		ret
 switchKey:
 		;input key

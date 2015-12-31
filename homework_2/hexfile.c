@@ -56,6 +56,7 @@ void show_this_row(int row, long offset, char buf[], int bytes_on_row)
 	{
 		char2hex(buf[i], s + 10 + i * 3);
 	}
+	//-----------------------------
 	for (i = 0; i < bytes_on_row; i++) /* 把buf中各个字节填入s右侧小数点处 */
 	{
 		s[59 + i] = buf[i];
@@ -90,6 +91,7 @@ void show_this_page(char buf[], long offset, int bytes_in_buf)
 	int i, rows, bytes_on_row;
 	clear_this_page();
 	rows = (bytes_in_buf + 15) / 16; /* 计算当前页的行数 */
+	//i == currRow
 	for (i = 0; i < rows; i++)
 	{
 		bytes_on_row = (i == rows - 1) ? (bytes_in_buf - i * 16) : 16; /* 当前行的字节数 */
@@ -138,8 +140,8 @@ main()
 	offset = 0;
 	do
 	{
-		int  handle, key, bytes_in_buf;
-		long file_size, offset, n;
+		//int  handle, key, bytes_in_buf;
+		//long file_size, offset, n;
 		n = file_size - offset;
 		if (n >= 256)
 			bytes_in_buf = 256;
