@@ -61,6 +61,7 @@ void show_this_row(int row, long offset, char buf[], int bytes_on_row)
 	{
 		s[59 + i] = buf[i];
 	}
+	// row = currRow
 	vp = vp + row * 80 * 2;       /* 计算row行对应的视频地址 */
 	for (i = 0; i < sizeof(s) - 1; i++) /* 输出s */
 	{

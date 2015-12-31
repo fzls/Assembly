@@ -147,31 +147,35 @@ outptuByteData:
 	pop cx
 		ret
 outputThisRow:
-		;TODO
 		mov ax, 0B800h
 		mov es, ax
+		mov ax, offset s
+		mov si, ax
+
 		mov word ptr curVideoOffset, 0000h
 		mov ax, word ptr currRow
 		mov bx, 80*2
 		mul bx
 		add word ptr curVideoOffset, ax
 	push cx
-		mov cx, len_pattern-1
-		mov bx, 0
+		mov cx, len_pattern
+		;mov bx, 0
 		mov di, word ptr curVideoOffset
-	outputOneByte:
-		;TODO   fix output format
-		;mov di, word ptr curVideoOffset
-		mov ah, 17h;TODO color change
-		mov al, s[bx]
-	push cx
-		mov cx, 1
 		cld
-		stosb;di++
-	pop cx
+		mov bx,0
+	displayCurrentLine:
+		lodsb ;s[bx] is now in al
+		mov ah, 07h
+		cmp bx, 59
+		jae Others
+		cmp al, '|'
+		jne Others
+	isVerticalLine:
+		mov ah, 0Fh
+	Others:
+		stosw
 		inc bx
-		;add word ptr curVideoOffset, 2
-	loop outputOneByte
+		loop displayCurrentLine
 	pop cx
 		ret
 show_this_row:
