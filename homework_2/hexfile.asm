@@ -18,15 +18,15 @@ data segment
 	_Esc          dw	011Bh
 	;---------------------Strings---------------------
 	filename      db    101
-			      db    ?
-			      db    101 dup(0)
+                  db    ?
+                  db    101 dup(0)
 	buf           db    256 dup(?)
-	prompt         db    'Please input filename:$'
+	prompt        db    'Please input filename:$'
 	errorOpenFile db    'Cannot open file!$'
 	debugInfo     db    '---------DEBUG----------!$'
 	s             db    '00000000: xx xx xx xx|xx xx xx xx|xx xx xx xx|xx xx xx xx  ................'
 	pattern       db    '00000000:            |           |           |                             '
-	len_pattern equ $-pattern
+	len_pattern   equ   $-pattern
 	t             db    '0123456789ABCDEF'
 	xx            db    ?
 	;---------------------Int---------------------
@@ -41,7 +41,7 @@ data segment
 	;---------------------Long_Int---------------------
 	file_size     dd    ?
 	offsets       dd    ?
-	currRowOffset     dd    ?
+	currRowOffset dd    ?
 	n             dd    ?
 	lastPageSize  dd    ?
 data ends
@@ -476,3 +476,4 @@ debug:
 	    ret
 code ends
 	end main
+
